@@ -52,9 +52,9 @@ constexpr bool is_character_type
 #endif
 
     template <typename AT, typename ST, typename = void>
-    struct is_allocator_type : std::false_type {};
+    struct is_allocator : std::false_type {};
     template <typename AT, typename ST>
-    struct is_allocator_type<AT, ST,
+    struct is_allocator<AT, ST,
         void_t<
             typename AT::value_type,
             decltype(std::declval<AT&>().allocate(std::declval<ST>())),
@@ -66,7 +66,9 @@ constexpr bool is_character_type
         >
     > : std::true_type {};
     template <typename AT, typename ST>
-    using enable_if_allocator = std::enable_if<is_allocator_type<AT, ST>::value>;
+    constexpr bool is_allocator_type() {
+        return is_allocator<AT, ST>::value;
+    }
 
     template <typename UT, typename ST, typename = void>
     struct is_string_utility : std::false_type {};
@@ -88,7 +90,9 @@ constexpr bool is_character_type
         >
     > : std::true_type {};
     template <typename UT, typename ST>
-    using enable_if_string_utility = std::enable_if<is_string_utility<UT, ST>::value>;
+    constexpr bool is_string_util() {
+        return is_string_utility<UT, ST>::value;
+    }
 
     template <typename ST>
     struct is_size_type : std::is_integral<ST> {};
@@ -100,26 +104,26 @@ IF_CPP20(
 )
 
 IF_CPP20(
-    template <typename Alloc>
+    template <typename Alloc, typename CT>
     concept Allocator = requires(Alloc alloc, std::size_t n) {
         typename Alloc::value_type;
-
+        requires std::same_as<typename Alloc::value_type, CT>;
         { alloc.allocate(n) } -> std::same_as<typename Alloc::value_type*>;
         { alloc.deallocate((typename Alloc::value_type*)nullptr, n) };
     };
 )
 
 IF_CPP20(
-    template <typename U>
+    template <typename SU>
     concept StringUtility = requires(
-        typename U::char_t* dst,
-        const typename U::char_t* src,
+        typename SU::char_t* dst,
+        const typename SU::char_t* src,
         std::size_t n
     ) {
-        { U::strcpy(dst, src) };
-        { U::strset(dst, typename U::char_t{}, n) };
-        { U::strcmp(src, src) } -> std::integral;
-        { U::strlen(src) } -> std::integral;
+        { SU::strcpy(dst, src) };
+        { SU::strset(dst, typename SU::char_t{}, n) };
+        { SU::strcmp(src, src) } -> std::integral;
+        { SU::strlen(src) } -> std::integral;
     };
 )
 

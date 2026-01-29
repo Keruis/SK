@@ -9,7 +9,7 @@ import include.config as config
 # 编译器设置
 # -----------------------------
 CC = "g++"
-CXX_STANDARD = "-std=c++11"
+CXX_STANDARD = "-std=c++20"
 OPT_FLAGS = ["-O2", "-march=native"]
 
 # 输出目录
