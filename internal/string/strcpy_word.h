@@ -3,15 +3,15 @@
 
 #include <cstdint>
 
-namespace Backend::String {
+namespace SK::Internal::String {
 
     enum class Direction { 
         Forward, 
         Backward 
     };
 
-    template<typename CharT, Direction dir>
-    inline void copy_bytes(char* d, const char* s, size_t length) noexcept {
+    template<typename CT, Direction dir>
+    inline void copy_bytes(char* d, const char* s, std::size_t length) noexcept {
         if (length == 0) return;
 
         if constexpr (dir == Direction::Backward) {
@@ -51,8 +51,8 @@ namespace Backend::String {
         }
     }
 
-    template <typename CharT, bool NonOverlapping = true>
-    inline __attribute__((always_inline)) void strcpy_scalar(CharT* dest, const CharT* src, size_t length) noexcept {
+    template <typename CT, bool NonOverlapping = true>
+    inline __attribute__((always_inline)) void strcpy_scalar(CT* dest, const CT* src, std::size_t length) noexcept {
         if (length == 0 || dest == src) return;
 
         if constexpr (NonOverlapping) {

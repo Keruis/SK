@@ -1,7 +1,8 @@
 #include <iostream>
 
 #include "../include/container/string/string_traits.hpp"
-#include "../include/config/str_optimization_level.h"
+#include "../foundation/config/str_optimization_level.h"
+#include "../include/container/utility/character.h"
 
 
 struct TestAllocator {
@@ -30,8 +31,7 @@ int main() {
         SK::Config::str_optimization_level::O1,
         char,
         TestAllocator,
-        TestStringUtility,
-        size_t
+        SK::Container::Utility::strutil
     >;
 
     TraitsOK::char_t c = 'd';
