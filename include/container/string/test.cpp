@@ -5,58 +5,26 @@
 #include "../utility/character.h"
 #include "../../../foundation/config/str_optimization_level.h"
 
-
-struct TestAllocator {
-    using value_type = char;
-
-    char* allocate(std::size_t n) {
-        return static_cast<char*>(::operator new(n));
-    }
-
-    void deallocate(char* p, std::size_t) {
-        ::operator delete(p);
-    }
-};
-
-
 int main() {
     using MyString = SK::Container::String::string_box<
-            SK::Container::string_traits<
-                SK::Config::str_optimization_level::O1,
-                char,
-                TestAllocator,
-                SK::Container::Utility::strutil
-        >
+        struct TestTraits
     >;
 
-    MyString s;
-    std::cout << "string_box constructed.\n";
-    std::cout << "size: " << sizeof(s) << std::endl;
+    std::cout << "=== Default construction ===\n";
+    MyString s1;
+    std::cout << "Is large? " << static_cast<int>(s1.storage.cache.is_large) << "\n";
+    std::cout << "Cache size: " << static_cast<int>(s1.storage.cache.size) << "\n";
 
-    std::cout << "Cache size: " << static_cast<int>(s.storage.cache.size) << "\n";
-    std::cout << "Cache is_large: " << static_cast<int>(s.storage.cache.is_large) << "\n";
+    std::cout << "\n=== Cache construction (small size) ===\n";
+    MyString s2(SK::Container::String::string_box<MyString::string_traits>::max_cache_size - 1);
+    std::cout << "Is large? " << static_cast<int>(s2.storage.cache.is_large) << "\n";
+    std::cout << "Cache size: " << static_cast<int>(s2.storage.cache.size) << "\n";
 
-    s.storage.cache.data[0] = 'H';
-    s.storage.cache.data[1] = 'i';
-    s.storage.cache.size = 2;
-    s.storage.cache.is_large = 0;
-
-    std::cout << "Cache data: ";
-    for (std::size_t i = 0; i < s.storage.cache.size; ++i) {
-        std::cout << s.storage.cache.data[i];
-    }
-    std::cout << "\n";
-
-    s.storage.large.data = new char[100];
-    s.storage.large.size = 100;
-    s.storage.large.capacity = 127;
-    s.storage.large.is_large = 1;
-
-    std::cout << "Large size: " << s.storage.large.size << "\n";
-    std::cout << "Large capacity: " << s.storage.large.capacity << "\n";
-    std::cout << "Large is_large: " << s.storage.large.is_large << "\n";
-
-    delete[] s.storage.large.data;
+    std::cout << "\n=== Large construction (big size) ===\n";
+    MyString s3(SK::Container::String::string_box<MyString::string_traits>::max_cache_size + 10);
+    std::cout << "Is large? " << static_cast<int>(s3.storage.large.is_large) << "\n";
+    std::cout << "Large size: " << s3.storage.large.size << "\n";
+    std::cout << "Large capacity: " << s3.storage.large.capacity << "\n";
 
     return 0;
 }
