@@ -10,21 +10,23 @@ int main() {
         struct TestTraits
     >;
 
+    std::cout << sizeof(MyString) << std::endl;
+
     std::cout << "=== Default construction ===\n";
     MyString s1;
-    std::cout << "Is large? " << static_cast<int>(s1.storage.cache.is_large) << "\n";
-    std::cout << "Cache size: " << static_cast<int>(s1.storage.cache.size) << "\n";
+    std::cout << "Is large? " << static_cast<int>(s1.storage.header.is_large) << "\n";
+    std::cout << "Cache size: " << static_cast<int>(s1.storage.header.extent) << "\n";
 
     std::cout << "\n=== Cache construction (small size) ===\n";
     MyString s2(SK::Container::String::string_box<MyString::string_traits>::max_cache_size - 1);
-    std::cout << "Is large? " << static_cast<int>(s2.storage.cache.is_large) << "\n";
-    std::cout << "Cache size: " << static_cast<int>(s2.storage.cache.size) << "\n";
+    std::cout << "Is large? " << static_cast<int>(s2.storage.header.is_large) << "\n";
+    std::cout << "Cache size: " << static_cast<int>(s2.storage.header.extent) << "\n";
 
     std::cout << "\n=== Large construction (big size) ===\n";
     MyString s3(SK::Container::String::string_box<MyString::string_traits>::max_cache_size + 10);
-    std::cout << "Is large? " << static_cast<int>(s3.storage.large.is_large) << "\n";
-    std::cout << "Large size: " << s3.storage.large.size << "\n";
-    std::cout << "Large capacity: " << s3.storage.large.capacity << "\n";
+    std::cout << "Is large? " << static_cast<int>(s3.storage.header.is_large) << "\n";
+    std::cout << "Large size: " << s3.storage.data.large.size << "\n";
+    std::cout << "Large capacity: " << s3.storage.header.extent << "\n";
 
     return 0;
 }
