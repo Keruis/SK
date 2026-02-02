@@ -7,13 +7,18 @@
 
 namespace SK::Container::String {
 
+enum class string_mode : bool {
+    cache,
+    large 
+};
+
 template <typename ST>
-//requires Utility::StringTraits<ST>
+requires Utility::StringTraits<ST>
 struct string_box {
     using string_traits = ST;
     
-    using char_t            =                char;
-    using pointer_t         =            char*;
+    using char_t            =                ST::char_t;
+    using pointer_t         =             ST::pointer_t;
 
     using size_type = Utility::char_integer<char_t>::type;
 
@@ -34,7 +39,7 @@ struct string_box {
     struct [[using gnu: aligned(sizeof(std::size_t))]] storage_t {
         struct {
             size_type extent : char_size * 8 - 1;
-            size_type is_large : 1;
+            string_mode mode : 1;
         } header;
         struct {
             union {
@@ -52,7 +57,7 @@ struct string_box {
         : storage {
             size >= max_cache_size ? storage_t {
                 .header {
-                    .is_large {1}
+                    .mode { string_mode::large }
                 },
                 .data {
                     .large {
@@ -69,9 +74,22 @@ struct string_box {
                 }
             }
         }
-    {
-        
-    }
+    {}
+
+    constexpr explicit string_box(char_t ch) noexcept 
+        : storage {
+            .header {
+                .extent {
+                    1
+                }
+            },
+            .data {
+                .cache {
+                    .data { ch }
+                }
+            }
+        }
+    {}
     
     constexpr ~string_box() noexcept = default;
 };

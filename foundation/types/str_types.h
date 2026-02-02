@@ -75,7 +75,6 @@ concept StringUtility = requires(
 
 template <typename ST>
 concept StringTraits = requires {
-    typename ST::size_t;
     typename ST::char_t;
     typename ST::reference_t;
     typename ST::const_reference_t;

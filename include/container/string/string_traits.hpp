@@ -3,7 +3,7 @@
 #include "../../../foundation/config/str_optimization_level.h"
 #include "../../../foundation/types/str_types.h"
 
-namespace SK::Container {
+namespace SK::Container::String {
 
 template <
     Config::str_optimization_level SO,
@@ -15,8 +15,6 @@ template <
     Utility::Character<CT> &&
     Utility::Allocator<AT, CT>
 ) struct string_traits {
-    using size_t            =    std::size_t;
-
     using char_t            =             CT;
     using reference_t       =            CT&;
     using const_reference_t =      const CT&;

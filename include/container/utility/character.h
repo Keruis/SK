@@ -16,7 +16,7 @@ template <
     typename CT
 > requires Character<CT>
 struct strutil<
-    Config::str_optimization_level::O1, 
+    Config::str_optimization_level::O0, 
     CT
 > : Internal::String::string_util_basic<
         CT, 
@@ -27,33 +27,11 @@ template <
     typename CT
 > requires Character<CT>
 struct strutil<
-    Config::str_optimization_level::O2, 
-    CT
-> : Internal::String::string_util_basic<
-        CT,
-        Internal::execution_policy::word
-    > {};
-
-template <
-    typename CT
-> requires Character<CT>
-struct strutil<
-    Config::str_optimization_level::O3, 
-    CT
-> : Internal::String::string_util_basic<
-        CT,
-        Internal::execution_policy::sse
-    > {};
-
-template <
-    typename CT
-> requires Character<CT>
-struct strutil<
     Config::str_optimization_level::Ofast, 
     CT
 > : Internal::String::string_util_basic<
         CT,
-        Internal::execution_policy::avx
+        Internal::execution_policy::scalar
     > {};
 
     
