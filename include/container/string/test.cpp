@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <new>
 #include <string>
+#include "string.hpp"
 
 template <typename T>
 struct simple_allocator {
@@ -26,19 +27,23 @@ struct simple_allocator {
 };
 
 int main() {
-    using MyString = SK::Container::String::string_core<
+    using MyString = SK::Container::String::string<
         SK::Container::String::string_traits<
             SK::Config::str_optimization_level::O0,
             char,
             simple_allocator<char>,
             SK::Container::Utility::strutil
-        >,
-        false
+        >
     >;
 
     std::cout << "String size = " << sizeof(MyString) << std::endl;
 
-    MyString s1("123456789123456789123456789123456789");
+    MyString s1('a', 5);
+    std::cout << s1.data() << std::endl;
+    std::cout << s1.size() << std::endl;
+    std::cout << s1.capacity() <<std::endl;
+
+    s1.append('b', "abc", MyString{}.append('r'));
     std::cout << s1.data() << std::endl;
     std::cout << s1.size() << std::endl;
     std::cout << s1.capacity() <<std::endl;

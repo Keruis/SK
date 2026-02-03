@@ -50,7 +50,13 @@ struct string_box {
     } storage;
 
     constexpr explicit string_box() noexcept 
-        : storage {}
+        : storage {
+            .data {
+                .cache {
+                    .data { char_t() }
+                }
+            }
+        }
     {}
 
     constexpr explicit string_box(std::size_t size) noexcept 
@@ -85,7 +91,7 @@ struct string_box {
             },
             .data {
                 .cache {
-                    .data { ch }
+                    .data { ch, char_t() }
                 }
             }
         }
