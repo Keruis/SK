@@ -8,19 +8,25 @@
 namespace SK::Container::String {
 
 template <
+    typename BSCTX,
     typename ST
 > requires Utility::StringTraits<ST>
-class string : public string_core<ST> {
-    using core_t = string_core<ST>;
+class string_basic : public string_core<BSCTX, ST> {
+    using core_t = string_core<BSCTX, ST>;
+    
 public:
     using core_t::core_t;
 
     template <typename SelfType, typename... Args>
     constexpr decltype(auto) append(this SelfType&& self, Args&&... args) 
-        noexcept requires (
+        noexcept (
+            core_t::string_context::template has_v<string_flag::Noexcept>
+        ) requires (
             requires {
                 (self.append_impl(std::forward<Args>(args)), ...);
-            }
+            } && 
+            !core_t::string_context
+                ::template has_v<string_flag::Mutable>
         )
     {
         return (
@@ -31,6 +37,7 @@ public:
             std::forward<SelfType>(self)
         );
     }
+
 
 private:
 

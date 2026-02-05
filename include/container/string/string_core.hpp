@@ -8,14 +8,25 @@
 #include "../../../foundation/config/str_optimization_level.h"
 
 #include "string_box.hpp"
+#include "string_context.hpp"
 
 namespace SK::Container::String {
 
 template <
+    typename SCTX,
     typename ST
 > requires Utility::StringTraits<ST>
 class string_core : protected string_box<ST> {
 public:
+    using string_context = typename SCTX::template with_flag<
+        string_flag::Noexcept,
+        requires {
+            { std::declval<string_core&>().
+                create(std::declval<std::size_t&>(),
+                std::declval<std::size_t&>()) 
+            } noexcept;
+        }
+    >;
     using string_traits = ST;
 
     using char_t            =   typename string_traits::char_t;
@@ -42,10 +53,7 @@ public:
 
     constexpr string_core(const string_core& other) 
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .create(std::declval<std::size_t&>(), std::declval<std::size_t&>())
-            )
+            SCTX::template has_v<string_flag::Noexcept>
         ) 
     {
         assign_init(other);
@@ -118,6 +126,10 @@ public:
     }
 
     [[nodiscard]] constexpr const_pointer_t c_str() const noexcept {
+        return data();
+    }
+
+    [[nodiscard]] constexpr pointer_t c_str() noexcept {
         return data();
     }
 
@@ -230,12 +242,12 @@ public:
 
 private:
     template <string_mode mode>
-    [[nodiscard]] constexpr bool is_mode() const noexcept {
+    constexpr bool is_mode() const noexcept {
         return storage.header.mode == mode;
     }
 
     template <Config::str_optimization_level level>
-    [[nodiscard]] consteval bool is_level() const noexcept {
+    consteval bool is_level() const noexcept {
         return string_traits::str_optimization == level;
     }
 
@@ -245,16 +257,16 @@ private:
         storage.data.cache.data[0] = char_t();
     }
 
-    [[nodiscard]] constexpr std::size_t pow2(std::size_t exp) const noexcept {
+    constexpr std::size_t pow2(std::size_t exp) const noexcept {
         return std::size_t{1} << exp;
     }
 
-    [[nodiscard]] constexpr std::size_t next_pow2_exp(std::size_t n) const noexcept {
+    constexpr std::size_t next_pow2_exp(std::size_t n) const noexcept {
         if (n <= 1) return 0;
         return std::bit_width(n - 1);
     }
 
-    [[nodiscard]] constexpr pointer_t create(std::size_t& capacity, std::size_t& exp)
+    constexpr pointer_t create(std::size_t& capacity, std::size_t& exp)
         noexcept (
             is_level<Config::str_optimization_level::Ofast>() &&
             noexcept (
@@ -264,14 +276,10 @@ private:
     {
         const auto rounded = pow2(exp = next_pow2_exp(capacity));
 
-        if constexpr (!is_level<
-            Config::str_optimization_level::Ofast
-        >()) {
-            if (rounded > max_size) {
-                throw std::length_error(
-                    "string::create: size too big"
-                );
-            }
+        if (rounded > max_size) {
+            throw std::length_error(
+                "string::create: size too big"
+            );
         }
 
         return alloc_t::allocate((capacity = rounded));
@@ -340,7 +348,6 @@ private:
             const auto& header = storage.header;
             auto& cache = storage.data.cache;
             const auto length = static_cast<std::size_t>(header.extent);
-            [[assume(length <= box_t::max_cache_size)]]
             strutil::strcpy(
                 cache.data, 
                 str,
@@ -377,7 +384,6 @@ private:
             const auto& header = storage.header;
             auto& cache = storage.data.cache;
             const auto length = static_cast<std::size_t>(header.extent);
-            [[assume(length <= box_t::max_cache_size)]]
             strutil::strset(
                 cache.data, 
                 ch,
@@ -494,10 +500,9 @@ private:
 
     constexpr void resize_cache(std::size_t size) 
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .template respace<true>(std::declval<std::size_t>())
-            )
+            requires {
+                { respace<true>(std::declval<std::size_t>()) } noexcept;
+            }
         ) 
     {
         auto& header = storage.header;
@@ -513,10 +518,9 @@ private:
 
     constexpr void resize_large(std::size_t size) 
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .template respace<false>(std::declval<std::size_t>())
-            )
+            requires {
+                { respace<false>(std::declval<std::size_t>()) } noexcept;
+            }
         ) 
     {
         auto& header = storage.header;
@@ -533,10 +537,9 @@ private:
 
     constexpr void reserve_cache(std::size_t size)
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .template respace<true>(std::declval<std::size_t>())
-            )
+            requires {
+                { respace<true>(std::declval<std::size_t>()) } noexcept;
+            }
         ) 
     {
         if (size < box_t::max_cache_size) return;
@@ -546,10 +549,9 @@ private:
 
     constexpr void reserve_large(std::size_t size)
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .template respace<false>(std::declval<std::size_t>())
-            )
+            requires {
+                { respace<false>(std::declval<std::size_t>()) } noexcept;
+            }
         ) 
     {
         auto& header = storage.header;
@@ -560,10 +562,9 @@ private:
 
     constexpr void append_cache(const_pointer_t str, std::size_t size) 
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .template respace<true>(std::declval<std::size_t>())
-            )
+            requires {
+                { respace<false>(std::declval<std::size_t>()) } noexcept;
+            }
         ) 
     {
         auto& header = storage.header;
@@ -593,7 +594,13 @@ private:
         large.data[next_length] = char_t();
     }
 
-    constexpr void append_large(const_pointer_t str, std::size_t size) noexcept {
+    constexpr void append_large(const_pointer_t str, std::size_t size) 
+        noexcept(
+            requires {
+                { respace<false>(std::declval<std::size_t>()) } noexcept;
+            }
+        )
+    {
         auto& header = storage.header;
         auto& large = storage.data.large;
 
@@ -621,23 +628,48 @@ private:
     }
 
 protected:
-    constexpr void append_impl(const_pointer_t str, std::size_t size) noexcept {
+    constexpr void append_impl(const_pointer_t str, std::size_t size) 
+        noexcept(
+            requires {
+                { append_cache(str, size) } noexcept;
+                { append_large(str, size) } noexcept;
+            }
+        )
+    {
         if (is_mode<string_mode::cache>()) {
             return append_cache(str, size);
         }
         append_large(str, size);
     }
 
-    constexpr void append_impl(char_t ch) noexcept {
+    constexpr void append_impl(char_t ch) 
+        noexcept(
+            requires {
+                { append_impl(std::declval<const_pointer_t>(), 1) } noexcept;
+            }
+        )
+    {
         const char_t* ptr = &ch;
         append_impl(ptr, 1);
     }
 
-    constexpr void append_impl(const_pointer_t str) noexcept {
+    constexpr void append_impl(const_pointer_t str) 
+        noexcept(
+            requires {
+                { append_impl(str, strutil::strlen(str)) } noexcept;
+            }
+        )
+    {
         append_impl(str, strutil::strlen(str));
     }
 
-    constexpr void append_impl(const string_core& other) noexcept {
+    constexpr void append_impl(const string_core& other) 
+        noexcept(
+            requires {
+                { append_impl(other.data(), other.size()) } noexcept;
+            }
+        ) 
+    {
         append_impl(other.data(), other.size());
     }
 };

@@ -27,7 +27,7 @@ struct string_box {
     struct [[using gnu: packed]] large_t {
         pointer_t   data;
         std::size_t size;
-        uint8_t _[8 - char_size];
+        uint8_t _[sizeof(std::size_t) - char_size];
     };
 
     static constexpr std::size_t max_cache_size = 3 * sizeof(std::size_t) / char_size - 1;
