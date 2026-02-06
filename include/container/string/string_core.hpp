@@ -74,10 +74,7 @@ public:
 
     constexpr string_core(char_t ch, std::size_t size)
         noexcept (
-            noexcept (
-                std::declval<string_core&>()
-                    .assign_init(std::declval<char_t>())
-            )
+            SCTX::template has_v<string_flag::Noexcept>
         ) : box_t(size)
     {
         assign_init(ch);
@@ -85,10 +82,7 @@ public:
 
     constexpr string_core(const_pointer_t str) 
         noexcept (
-            noexcept(
-                std::declval<string_core&>()
-                    .assign_init(std::declval<const_pointer_t>())
-            )
+            SCTX::template has_v<string_flag::Noexcept>
         ) : box_t(strutil::strlen(str))
     {
         assign_init(str);
@@ -96,10 +90,7 @@ public:
 
     constexpr string_core(const_pointer_t str, std::size_t length) 
         noexcept (
-            noexcept(
-                std::declval<string_core&>()
-                    .assign_init(std::declval<const_pointer_t>())
-            )
+            SCTX::template has_v<string_flag::Noexcept>
         ) : box_t(length)
     {
         assign_init(str);
