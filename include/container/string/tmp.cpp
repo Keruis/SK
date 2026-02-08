@@ -7,6 +7,9 @@ namespace SK::Container::String {
 template <char...>
 struct ct_string;
 
+template <typename...>
+struct ct_t_array;
+
 template <typename, typename>
 struct ct_concat;
 
@@ -15,11 +18,21 @@ struct ct_concat<ct_string<Cs1...>, ct_string<Cs2...>> {
     using type = ct_string<Cs1..., Cs2...>;
 };
 
+template <typename... Ts1, typename... Ts2>
+struct ct_concat<ct_t_array<Ts1...>, ct_t_array<Ts2...>> {
+    using type = ct_t_array<Ts1..., Ts2...>;
+};
+
 template <std::size_t, typename, typename>
 struct ct_find;
 
 template <char... Cs1, char... Cs2>
 struct ct_find<ct_string<Cs1...>::size - ct_string<Cs2...>::size + 1, ct_string<Cs1...>, ct_string<Cs2...>> {
+    static constexpr std::size_t pos = static_cast<std::size_t>(-1);
+};
+
+template <typename SearchT, typename... Ts>
+struct ct_find<ct_t_array<Ts...>::size, SearchT, ct_t_array<Ts...>> {
     static constexpr std::size_t pos = static_cast<std::size_t>(-1);
 };
 
@@ -33,6 +46,19 @@ struct ct_find<N, ct_string<Cs1...>, ct_string<Cs2...>> {
             ct_string<Cs1...>::template substr<N, ct_string<Cs2...>::size>::template equal<ct_string<Cs2...>>
             ? N
             : ct_find<N + 1, ct_string<Cs1...>, ct_string<Cs2...>>::pos
+        );
+};
+
+template <std::size_t N, typename SearchT, typename... Ts>
+struct ct_find<N, SearchT, ct_t_array<Ts...>> {
+    static constexpr std::size_t pos = 
+        (N + 1 > ct_t_array<Ts...>::size)
+        ? static_cast<std::size_t>(-1)
+        : 
+        (
+            std::is_same_v<SearchT, Ts...[N]>
+            ? N
+            : ct_find<N + 1, SearchT, ct_t_array<Ts...>>::pos
         );
 };
 
@@ -81,12 +107,82 @@ consteval auto operator""_cts() {
 template <auto CTST>
 using cts = typename decltype(CTST)::type;
 
+template <typename, typename, std::size_t>
+struct ct_remove_t;
+
+template <typename A, typename... Ts>
+struct ct_remove_t<A, ct_t_array<Ts...>, ct_t_array<Ts...>::size> {
+    using type = ct_t_array<>;
+};
+
+template <typename RemoveT, typename... Ts, std::size_t I>
+struct ct_remove_t<RemoveT, ct_t_array<Ts...>, I> {
+    using type = 
+        std::conditional_t<
+            std::is_same_v<RemoveT, Ts...[I]>,
+            typename ct_remove_t<RemoveT, ct_t_array<Ts...>, I + 1>::type,
+            typename ct_remove_t<RemoveT, ct_t_array<Ts...>, I + 1>::type::template add<Ts...[I]>
+        >;
+};
+
+template <typename, std::size_t>
+struct ct_t_array_at;
+
+template <std::size_t I, typename... Ts>
+struct ct_t_array_at<ct_t_array<Ts...>, I> {
+    using type = Ts...[I];
+};
+
+template <typename... Ts>
+struct ct_t_array {
+    using self = ct_t_array<Ts...>;
+
+    static constexpr std::size_t size = sizeof...(Ts);
+
+    static constexpr bool empty = size == 0;
+
+    template <std::size_t I>
+    using at = ct_t_array_at<self, I>::type;
+
+    template <typename NewT>
+    using add = ct_t_array<Ts..., NewT>;
+
+    template <typename Other>
+    using concat = ct_concat<self, Other>::type;
+
+    template <typename RemoveT, std::size_t S = 0>
+    using remove = ct_remove_t<RemoveT, self, S>::type;
+
+    template <typename T>
+    static constexpr bool has = (std::is_same_v<T, Ts> || ...);
+
+    template <typename... Us>
+    static constexpr bool has_all = (has<Us> && ...);
+
+    template <typename SearchT, std::size_t S = 0>
+    static constexpr std::size_t find = ct_find<0, SearchT, self>::pos;
+
+    template <typename L>
+    static consteval void for_each(L lambda) {
+        lambda.template operator()<Ts...>();
+    }
+};
+
+template <typename Key, typename Value>
+
 
 }
 
 using namespace SK::Container::String;
 
 #include <iostream>
+
+template <typename T>
+struct print_t {
+    print_t() {
+        std::cout << __PRETTY_FUNCTION__ <<std::endl;
+    }
+};
 
 int main() {
     using A = cts<"abcd"_cts>;
@@ -96,4 +192,21 @@ int main() {
     static_assert(A::substr<1, 2>::at<0> == 'b');
     static_assert(A::size == 4);
     static_assert(A::find<cts<"cd"_cts>> == 2);
+
+    using C = ct_t_array<int, double>;
+    static_assert(std::is_same_v<C::at<0>, int>);
+    static_assert(C::size == 2);
+    static_assert(std::is_same_v<C::add<char>, ct_t_array<int, double, char>>);
+    static_assert(std::is_same_v<C::concat<ct_t_array<char>>, ct_t_array<int, double, char>>);
+    static_assert(std::is_same_v<C::remove<double>, ct_t_array<int>>);
+    static_assert(C::has<int>);
+    static_assert(C::find<double> == 1);
+    C::for_each(
+        [] <typename... Ts> () {
+            static_assert(
+                std::is_same_v<Ts...[0], int> &&
+                std::is_same_v<Ts...[1], double>
+            );
+        }
+    );
 }
