@@ -10,6 +10,9 @@ struct ct_string;
 template <typename...>
 struct ct_t_array;
 
+template <typename... Entries>
+struct ct_table;
+
 template <typename, typename>
 struct ct_concat;
 
@@ -36,6 +39,11 @@ struct ct_find<ct_t_array<Ts...>::size, SearchT, ct_t_array<Ts...>> {
     static constexpr std::size_t pos = static_cast<std::size_t>(-1);
 };
 
+template <typename Key, typename... Entries>
+struct ct_find<ct_table<Entries...>::size, Key, ct_table<Entries...>> {
+    static_assert("ct_table::get<Key>: Key not found in table");
+};
+
 template <std::size_t N, char... Cs1, char... Cs2>
 struct ct_find<N, ct_string<Cs1...>, ct_string<Cs2...>> {
     static constexpr std::size_t pos = 
@@ -60,6 +68,26 @@ struct ct_find<N, SearchT, ct_t_array<Ts...>> {
             ? N
             : ct_find<N + 1, SearchT, ct_t_array<Ts...>>::pos
         );
+};
+
+template<bool Cond, typename T, typename F>
+struct lazy_conditional {
+    using type = T;
+};
+
+template<typename T, typename F>
+struct lazy_conditional<false, T, F> {
+    using type = typename F::type;
+};
+
+template <std::size_t I, typename Key, typename... Entries>
+struct ct_find<I, Key, ct_table<Entries...>> {
+    using entry = typename ct_table<Entries...>::template at<I>;
+    using type = lazy_conditional<
+        std::is_same_v<Key, typename entry::key>,
+        typename entry::value,
+        ct_find<I + 1, Key, ct_table<Entries...>>
+    >::type;
 };
 
 template <std::size_t, typename, std::size_t...>
@@ -125,12 +153,32 @@ struct ct_remove_t<RemoveT, ct_t_array<Ts...>, I> {
         >;
 };
 
+template <typename A, typename... Entries>
+struct ct_remove_t<A, ct_table<Entries...>, ct_table<Entries...>::size> {
+    using type = ct_table<>;
+};
+
+template <typename RemoveKey, typename... Entries, std::size_t I>
+struct ct_remove_t<RemoveKey, ct_table<Entries...>, I> {
+    using type = 
+        std::conditional_t<
+            std::is_same_v<RemoveKey, typename Entries...[I]::key>,
+            typename ct_remove_t<RemoveKey, ct_table<Entries...>, I + 1>::type,
+            typename ct_remove_t<RemoveKey, ct_table<Entries...>, I + 1>::type::template add<Entries...[I]>
+        >;
+};
+
 template <typename, std::size_t>
-struct ct_t_array_at;
+struct ct_at;
 
 template <std::size_t I, typename... Ts>
-struct ct_t_array_at<ct_t_array<Ts...>, I> {
+struct ct_at<ct_t_array<Ts...>, I> {
     using type = Ts...[I];
+};
+
+template <std::size_t I, typename... Entries>
+struct ct_at<ct_table<Entries...>, I> {
+    using type = Entries...[I];
 };
 
 template <typename... Ts>
@@ -142,7 +190,7 @@ struct ct_t_array {
     static constexpr bool empty = size == 0;
 
     template <std::size_t I>
-    using at = ct_t_array_at<self, I>::type;
+    using at = ct_at<self, I>::type;
 
     template <typename NewT>
     using add = ct_t_array<Ts..., NewT>;
@@ -169,7 +217,37 @@ struct ct_t_array {
 };
 
 template <typename Key, typename Value>
+struct ct_entry {
+    using key = Key;
+    using value = Value;
+};
 
+template <typename... Entries>
+struct ct_table {
+    using self = ct_table<Entries...>;
+
+    static constexpr std::size_t size = sizeof...(Entries);
+
+    static constexpr bool empty = size == 0;
+
+    template <std::size_t I>
+    using at = ct_at<self, I>::type;
+
+    template <typename SearchKey>
+    static constexpr bool contains = (std::is_same_v<SearchKey, typename Entries::key> || ...);
+
+    template <typename NewEntry>
+    using add = ct_table<Entries..., NewEntry>;
+
+    template <typename RemoveKey, std::size_t S = 0>
+    using remove = ct_remove_t<RemoveKey, self, S>::type;
+
+    template <typename SearchKey>
+    static constexpr bool has = (std::is_same_v<SearchKey, typename Entries::key> || ...);
+
+    template <typename Key, std::size_t S = 0>
+    using get = ct_find<S, Key, self>::type;
+};
 
 }
 
@@ -209,4 +287,16 @@ int main() {
             );
         }
     );
+
+    using D = ct_table<
+        ct_entry<int, char>,
+        ct_entry<double, bool>
+    >;
+
+    static_assert(D::size == 2);
+    static_assert(std::is_same_v<D::get<int>, char>);
+    static_assert(std::is_same_v<D::remove<int>, ct_table<
+        ct_entry<double, bool>
+    >>);
+    static_assert(D::has<int>);
 }
